@@ -1,0 +1,56 @@
+extends ../layout/main
+
+block variables
+     - var title = 'Quiz';
+     - var pageClass = 'themes-list';
+
+block content
+   .main
+      .themes
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+         .themes__item.item.loading
+            a
+             .item__inner
+                .item__image
+                   img
+                .item__desc
+                   h2
+block scripts
+   script.
+      window.addEventListener('load', (evt) => {
+         window.page='themesList';
+      })

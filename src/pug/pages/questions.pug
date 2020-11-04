@@ -1,0 +1,26 @@
+extends ../layout/main
+
+block variables
+     - var title = 'Quiz';
+     - var pageClass = 'questions';
+
+block content
+   .main
+      .question-app.loading
+         .number
+         .question
+         .answers
+            .btn
+            .btn
+            .btn
+            .btn
+         .controls
+            .btn
+            .btn
+
+
+block scripts
+   script.
+      window.addEventListener('load', (evt) => {
+         window.page='questions';
+      })
