@@ -251,7 +251,7 @@ window.addEventListener('load', (evt) => {
          const themeID = url.get('id')
          const currentThemeQuestions = JSON.parse(questionsList)
          questionsApp.init(currentThemeQuestions[themeID], questionElements)
-         setTimeout ( () => questionsApp.renderNextQuestion(), 700 )
+         //setTimeout ( () => questionsApp.renderNextQuestion(), 700 )
          
       break
    }
