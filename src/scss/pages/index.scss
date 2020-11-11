@@ -122,15 +122,19 @@
 }
 
 @media (max-width: $phone) {
+   margin-top: 10vw;
+   background: #fefefe;
    .themes {
       max-width: 100%;
       //gap: 2.5vw;
    }
  
    .item {
-      width: 46vw;
-      height: 46vw;
-      h2 { font-size: 3.1vw; }
+      width: 95vw;
+      height: 95vw;
+      margin-bottom: 10vw;
+
+      h2 { font-size: 5vw; }
    }
 }
 

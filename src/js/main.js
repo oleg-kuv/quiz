@@ -231,7 +231,7 @@ window.addEventListener('load', (evt) => {
    //  имитация загрузки данных
    const loadThemesList = () => new Promise( (resolve, reject) => {
       if ( serverRespCode == 200 )
-         setTimeout ( () => resolve( { code: serverRespCode, data: themesList } ), 300 )
+         setTimeout ( () => resolve( { code: serverRespCode, data: themesList } ), 700 )
       else
          setTimeout ( () => reject( new Error ( serverRespCode ) ), 2000 )
    })
