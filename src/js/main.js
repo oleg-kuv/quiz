@@ -222,17 +222,18 @@ const questionsApp = {
 window.addEventListener('resize', () => {
 })
 
+const showError = errMsg => {
+   console.error ( errMsg )
+   document.querySelector( '.main' ).innerText = errMsg
+}
+
 window.addEventListener('load', (evt) => {
    //  имитация загрузки данных
    const loadThemesList = () => new Promise( (resolve, reject) => {
-      switch (serverRespCode) {
-         case 200:
-            setTimeout ( () => resolve( { code: serverRespCode, data: themesList } ), 300 )
-         break
-         case 500:
-            setTimeout ( () => reject( { code: serverRespCode, data: null, msg: 'Error 500' } ), 2000 )
-         break
-      }
+      if ( serverRespCode == 200 )
+         setTimeout ( () => resolve( { code: serverRespCode, data: themesList } ), 300 )
+      else
+         setTimeout ( () => reject( new Error ( serverRespCode ) ), 2000 )
    })
 
    switch ( page ) {
@@ -240,10 +241,9 @@ window.addEventListener('load', (evt) => {
          loadThemesList().then( responce => {
             app.init (responce.data)
             app.renderThemesList()
-         }, error => {
-            showError (error.msg)
+         }).catch( error => {
+            showError(error)
          })
-
       break
       case 'questions': // страница вопросов
 
