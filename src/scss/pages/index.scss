@@ -1,4 +1,6 @@
 .themes-list {
+background: #fdfdfd;
+
 .main {
    //max-width: 660px;
 }
@@ -123,7 +125,6 @@
 
 @media (max-width: $phone) {
    margin-top: 10vw;
-   background: #fefefe;
    .themes {
       max-width: 100%;
       //gap: 2.5vw;

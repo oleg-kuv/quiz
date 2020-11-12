@@ -2,6 +2,71 @@ import {themesList} from './themesList.js'
 import {questionsList} from './questionsList.js'
 import {questionElements} from './questionCardDOM.js'
 const serverRespCode = 200
+class Button {
+   buttonNode = null
+   handlersList = []
+   defaultHandler = (event) => {event.preventDefault()}
+   lastHandler = null
+   className = 'btn__default'
+   id = null
+   value = null
+   constructor (name, buttonNode = null) {
+      if (buttonNode == null)
+         buttonNode = document.createElement('button')
+      buttonNode.innerText = name
+      buttonNode.classList.add ('btn', this.className)
+      this.buttonNode = buttonNode
+      this.buttonNode.addEventListener('click', this.defaultHandler)
+   }
+   setName (name) { this.buttonNode.innerText = name }
+   setID (id) { this.buttonNode.id = id; this.id = id }
+   setValue ( value ) { this.buttonNode.value = value; this.value = value }
+   getDOM() {return this.buttonNode}
+   addClass (...classNames) {this.buttonNode.classList.add(...classNames)}
+   removeClass (...classNames) {this.buttonNode.classList.remove(...classNames)}
+   resetClassList () {this.buttonNode.className="btn"}
+   enable () {
+      this.applyActions()
+      this.buttonNode.classList.remove('btn__disabled')
+   }
+   disable () {
+      this.removeActions()
+      this.buttonNode.classList.add('btn__disabled')
+   }
+   setAction (eventType, handler) {
+      this.buttonNode.removeEventListener('click', this.defaultHandler)
+      this.handlersList.push({eventType: eventType, action: handler})
+      this.buttonNode.addEventListener(eventType, handler)
+   }
+   applyActions () {
+      this.handlersList.forEach (handler => {
+         this.buttonNode.addEventListener(handler.eventType, handler.action)
+      })
+      this.buttonNode.removeEventListener('click', this.defaultHandler)
+   }
+   removeActions () {
+      this.handlersList.forEach (handler => {
+         this.buttonNode.removeEventListener(handler.eventType, handler.action)
+         this.buttonNode.addEventListener('click', this.defaultHandler)
+      })
+   }
+   remove () {this.buttonNode.remove()}
+}
+class AnswerButton extends Button {
+   correctAnswer () { 
+      this.resetClassList()
+      this.addClass('btn__correct')
+   }
+   notCorrectAnswer () {
+      this.resetClassList()
+      this.addClass('btn__not-correct')
+   }
+
+}
+/*const myBtn = new Button ('Кнопка')
+window.myBtn = myBtn 
+document.querySelector('body').appendChild(myBtn.getDOM())
+*/
 const app = {
    themesList: null,
    init ( arrThemesList ) {
@@ -70,6 +135,8 @@ const questionsApp = {
    nextQuestionEventRegistered: false,
    questionsList: [],
    questionElements: {},
+   answersButtons: {},
+   nextButton: null,
    init (arrQuestionsList, cardDom) {
       this.questionsList = arrQuestionsList
       this.questionElements = cardDom
@@ -81,11 +148,15 @@ const questionsApp = {
       this.questionElements.questionButton.classList.add( 'answer-button', 'btn' , 'btn__default')
       this.questionElements.answerComment.classList.add ( 'answer-comment' )
       this.questionElements.questionControls.classList.add ('controls')
-      this.questionElements.controlsNext.classList.add ('btn', 'btn__disabled', 'next')
-      this.questionElements.controlsNext.innerHTML='Следующий'
+      //this.questionElements.controlsNext.classList.add ('btn', 'btn__disabled', 'next')
+      //this.questionElements.controlsNext.innerHTML='Следующий'
       this.questionElements.controlsPrev.classList.add ('btn', 'btn__default', 'prev')
       this.questionElements.controlsPrev.innerHTML='Другая тема'
       this.questionElements.controlsPrev.href='index.html'
+
+      this.nextButton = new Button ('Следующий', this.questionElements.controlsNext)
+      this.nextButton.addClass('next')
+      this.nextButton.disable()
 
       this.questionElements.results.classList.add('results')
       this.questionElements.resultsHeader.innerText = "Ваш результат"
@@ -98,58 +169,65 @@ const questionsApp = {
       // Клонировать текущее дерево DOM формы ответов и очистить его содержимое
       const form = this.questionElements.questionAnswersForm.cloneNode(true)
       form.innerHTML = ''
-
+      this.answersButtons = {}
       // На основе массива ответов сформировать новое дерево ответов
       this.questionsList[this.iterator].answers.forEach(answer => {
          const answerGroup = this.questionElements.questionAnswerGroup.cloneNode(true)
+
          answerGroup.innerHTML = ''
-         const button = this.questionElements.questionButton.cloneNode(true)
+         //const button = this.questionElements.questionButton.cloneNode(true)
+         const button = new AnswerButton (answer.wording)
          //const label = this.questionElements.questionLabel.cloneNode(true)
 
-         button.id="answer_"+answer.id
-         button.value = answer.id
-         button.innerText = answer.wording
+         button.setID("answer_"+answer.id)
+         button.setValue(answer.id)
+         this.answersButtons['answer_'+answer.id] = button
+
          //label.setAttribute('for', "answer_"+answer.id)
          //label.innerText=answer.wording
-         answerGroup.appendChild ( button ) 
+         answerGroup.appendChild ( button.getDOM() ) 
          //answerGroup.appendChild ( label ) 
 
          form.appendChild( answerGroup )
          // саобытие авбора ответа
-         button.addEventListener('click', e => {
+         button.setAction ('click', e => {
             e.preventDefault()
             // обработка выбранного ответа
             this.answerClickHandler(e.target)
          })
       })
+
+      window.myButtons = this.answersButtons
       return form
    },
    nextQuestionHandler(){
       if ( !this.answered ) return false
       this.iterator++
       this.answered = false
-      this.disableButton ( this.questionElements.controlsNext )
+      this.nextButton.disable()
+      //this.disableButton ( this.questionElements.controlsNext )
       this.renderNextQuestion()
    },
    answerClickHandler ( buttonNode ) {
 
       // деактивировать все кнопки ответов
-      buttonNode.parentNode.parentNode.querySelectorAll('.answer-button').forEach(button => {
-         button = this.disableButton (button)
-      })
+      for (const [id, button] of Object.entries(this.answersButtons)) {
+         button.disable()
+      }
       this.answered = true
-      this.checkAnswer (buttonNode)
-      this.enableButton(this.questionElements.controlsNext)
+      this.userAnswer = buttonNode.value
+      this.checkAnswer ()
+      this.nextButton.enable()
+      //this.enableButton(this.questionElements.controlsNext)
    },
    checkAnswer(button) {
-      button.className = button.className.replace(/btn__.*(?!\S)/, '')
-      if (this.questionsList[this.iterator].correctAnswerID == button.value){
+      if (this.questionsList[this.iterator].correctAnswerID == this.userAnswer){
          this.score++
-         button.classList.add('btn__correct')
+         this.answersButtons['answer_'+this.userAnswer].correctAnswer()
          this.questionElements.answerComment.innerText = 'Верно '+this.questionsList[this.iterator].comment
 
       } else {
-         button.classList.add('btn__not-correct')
+         this.answersButtons['answer_'+this.userAnswer].notCorrectAnswer()
          this.questionElements.answerComment.innerText = 'Не верно, правильный ответ "'+this.questionsList[this.iterator].answers[this.questionsList[this.iterator].correctAnswerID].wording+'" '+this.questionsList[this.iterator].comment
       }
 
@@ -162,7 +240,7 @@ const questionsApp = {
    enableButton (buttonNode) {
       buttonNode.className = buttonNode.className.replace(/btn__.*(?!\S)/, '')
       buttonNode.classList.add('btn__default')
-      buttonNode.disabled = true
+      buttonNode.disabled = false
    },
 
    // выводит DOM вопроса
@@ -189,7 +267,8 @@ const questionsApp = {
          // Событие нажатия кнопки следующего ответа
          if ( !this.nextQuestionEventRegistered ){
             this.nextQuestionEventRegistered = true
-            this.questionElements.controlsNext.addEventListener ('click', this.nextQuestionHandler.bind(this))
+            this.nextButton.setAction('click', this.nextQuestionHandler.bind(this))
+            //this.questionElements.controlsNext.addEventListener ('click', this.nextQuestionHandler.bind(this))
          }
 
          // Если вопрос последний - вывести кнопку "Результаты"
@@ -227,7 +306,9 @@ const showError = errMsg => {
    document.querySelector( '.main' ).innerText = errMsg
 }
 
+
 window.addEventListener('load', (evt) => {
+   window.myButtons = {}
    //  имитация загрузки данных
    const loadThemesList = () => new Promise( (resolve, reject) => {
       if ( serverRespCode == 200 )
