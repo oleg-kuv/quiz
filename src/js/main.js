@@ -1,68 +1,18 @@
 import {themesList} from './themesList.js'
 import {questionsList} from './questionsList.js'
 import {questionElements} from './questionCardDOM.js'
+import * as Controls from './controls.js'
+import {QuestionCard} from './classQuestionCard.js'
+/*const questionCard = new QuestionCard
+window.questionCard = questionCard
+questionCard.countAnswers = 12
+questionCard.numberAnswer = 0
+questionCard.questionText = 'Question text'
+questionCard.addAnswer ('ans1', 0)
+questionCard.addAnswer ('ans2', 1)
+questionCard.addAnswer ('ans3', 2)
+*/
 const serverRespCode = 200
-class Button {
-   buttonNode = null
-   handlersList = []
-   defaultHandler = (event) => {event.preventDefault()}
-   lastHandler = null
-   className = 'btn__default'
-   id = null
-   value = null
-   constructor (name, buttonNode = null) {
-      if (buttonNode == null)
-         buttonNode = document.createElement('button')
-      buttonNode.innerText = name
-      buttonNode.classList.add ('btn', this.className)
-      this.buttonNode = buttonNode
-      this.buttonNode.addEventListener('click', this.defaultHandler)
-   }
-   setName (name) { this.buttonNode.innerText = name }
-   setID (id) { this.buttonNode.id = id; this.id = id }
-   setValue ( value ) { this.buttonNode.value = value; this.value = value }
-   getDOM() {return this.buttonNode}
-   addClass (...classNames) {this.buttonNode.classList.add(...classNames)}
-   removeClass (...classNames) {this.buttonNode.classList.remove(...classNames)}
-   resetClassList () {this.buttonNode.className="btn"}
-   enable () {
-      this.applyActions()
-      this.buttonNode.classList.remove('btn__disabled')
-   }
-   disable () {
-      this.removeActions()
-      this.buttonNode.classList.add('btn__disabled')
-   }
-   setAction (eventType, handler) {
-      this.buttonNode.removeEventListener('click', this.defaultHandler)
-      this.handlersList.push({eventType: eventType, action: handler})
-      this.buttonNode.addEventListener(eventType, handler)
-   }
-   applyActions () {
-      this.handlersList.forEach (handler => {
-         this.buttonNode.addEventListener(handler.eventType, handler.action)
-      })
-      this.buttonNode.removeEventListener('click', this.defaultHandler)
-   }
-   removeActions () {
-      this.handlersList.forEach (handler => {
-         this.buttonNode.removeEventListener(handler.eventType, handler.action)
-         this.buttonNode.addEventListener('click', this.defaultHandler)
-      })
-   }
-   remove () {this.buttonNode.remove()}
-}
-class AnswerButton extends Button {
-   correctAnswer () { 
-      this.resetClassList()
-      this.addClass('btn__correct')
-   }
-   notCorrectAnswer () {
-      this.resetClassList()
-      this.addClass('btn__not-correct')
-   }
-
-}
 /*const myBtn = new Button ('Кнопка')
 window.myBtn = myBtn 
 document.querySelector('body').appendChild(myBtn.getDOM())
@@ -137,153 +87,74 @@ const questionsApp = {
    questionElements: {},
    answersButtons: {},
    nextButton: null,
-   init (arrQuestionsList, cardDom) {
-      this.questionsList = arrQuestionsList
-      this.questionElements = cardDom
-      this.questionElements.topWrapper.classList.add ('question-app')
-      this.questionElements.questionNumber.classList.add ('number')
-      this.questionElements.questionText.classList.add ('question')
-      this.questionElements.questionAnswers.classList.add ('answers')
-      this.questionElements.questionAnswerGroup.classList.add ('answer_group')
-      this.questionElements.questionButton.classList.add( 'answer-button', 'btn' , 'btn__default')
-      this.questionElements.answerComment.classList.add ( 'answer-comment' )
-      this.questionElements.questionControls.classList.add ('controls')
-      //this.questionElements.controlsNext.classList.add ('btn', 'btn__disabled', 'next')
-      //this.questionElements.controlsNext.innerHTML='Следующий'
-      this.questionElements.controlsPrev.classList.add ('btn', 'btn__default', 'prev')
-      this.questionElements.controlsPrev.innerHTML='Другая тема'
-      this.questionElements.controlsPrev.href='index.html'
+   questionCardsList: [],
+   init (arrQuestionsList) {
+      arrQuestionsList.forEach( (question, i) => {
+         const questionCard = new QuestionCard (arrQuestionsList.length)
 
-      this.nextButton = new Button ('Следующий', this.questionElements.controlsNext)
-      this.nextButton.addClass('next')
-      this.nextButton.disable()
+         questionCard.numberAnswer = i+1
+         questionCard.questionText = question.wording
+         questionCard.answerAnnotation = ''
+         questionCard.trueAnswerID = question.correctAnswerID
+         // Добавление кнопок ответа
+         question.answers.forEach (answer => {
+            // Добавление кнопки и события при выборе ответа
+            questionCard.addAnswer(answer.wording, answer.id, e => {
+               e.preventDefault()
+               const userAnswer = e.target.value
+               questionCard.userAnswer = userAnswer 
 
-      this.questionElements.results.classList.add('results')
-      this.questionElements.resultsHeader.innerText = "Ваш результат"
+               // Деактивировать все кнопки ответа
+               questionCard.answerList.forEach( answerButton => answerButton.disable())
 
-      //this.questionElements.questionButton.type = "button"
-      this.questionElements.questionButton.name = "answer" 
-   },
-   // генрирует DOM списка ответов
-   genAnswersList () {
-      // Клонировать текущее дерево DOM формы ответов и очистить его содержимое
-      const form = this.questionElements.questionAnswersForm.cloneNode(true)
-      form.innerHTML = ''
-      this.answersButtons = {}
-      // На основе массива ответов сформировать новое дерево ответов
-      this.questionsList[this.iterator].answers.forEach(answer => {
-         const answerGroup = this.questionElements.questionAnswerGroup.cloneNode(true)
+               // Отметить выбранный ответ как правильный/неправильный
+               this.checkAnswer(questionCard, question.comment)
 
-         answerGroup.innerHTML = ''
-         //const button = this.questionElements.questionButton.cloneNode(true)
-         const button = new AnswerButton (answer.wording)
-         //const label = this.questionElements.questionLabel.cloneNode(true)
+               // Активировать  кнопкку Далее
+               questionCard.nextButton.enable()
+               questionCard.nextButton.setAction('click', e => this.renderNextQuestion( ) )
+            })
 
-         button.setID("answer_"+answer.id)
-         button.setValue(answer.id)
-         this.answersButtons['answer_'+answer.id] = button
-
-         //label.setAttribute('for', "answer_"+answer.id)
-         //label.innerText=answer.wording
-         answerGroup.appendChild ( button.getDOM() ) 
-         //answerGroup.appendChild ( label ) 
-
-         form.appendChild( answerGroup )
-         // саобытие авбора ответа
-         button.setAction ('click', e => {
-            e.preventDefault()
-            // обработка выбранного ответа
-            this.answerClickHandler(e.target)
          })
-      })
 
-      window.myButtons = this.answersButtons
-      return form
+         this.questionCardsList.push(questionCard)
+      } )
+      window.myQuestionList = this.questionCardsList
    },
-   nextQuestionHandler(){
-      if ( !this.answered ) return false
-      this.iterator++
-      this.answered = false
-      this.nextButton.disable()
-      //this.disableButton ( this.questionElements.controlsNext )
-      this.renderNextQuestion()
-   },
-   answerClickHandler ( buttonNode ) {
-
-      // деактивировать все кнопки ответов
-      for (const [id, button] of Object.entries(this.answersButtons)) {
-         button.disable()
-      }
-      this.answered = true
-      this.userAnswer = buttonNode.value
-      this.checkAnswer ()
-      this.nextButton.enable()
-      //this.enableButton(this.questionElements.controlsNext)
-   },
-   checkAnswer(button) {
-      if (this.questionsList[this.iterator].correctAnswerID == this.userAnswer){
+   checkAnswer(questionCard, comment) {
+      const correctAnswerText = questionCard.answerList[questionCard.trueAnswerID].buttonNode.textContent
+      if (questionCard.userAnswer == questionCard.trueAnswerID){
+         questionCard.answerList[questionCard.userAnswer].correctAnswer()
+         questionCard.answerAnnotation = 'Верно' + comment
          this.score++
-         this.answersButtons['answer_'+this.userAnswer].correctAnswer()
-         this.questionElements.answerComment.innerText = 'Верно '+this.questionsList[this.iterator].comment
-
       } else {
-         this.answersButtons['answer_'+this.userAnswer].notCorrectAnswer()
-         this.questionElements.answerComment.innerText = 'Не верно, правильный ответ "'+this.questionsList[this.iterator].answers[this.questionsList[this.iterator].correctAnswerID].wording+'" '+this.questionsList[this.iterator].comment
+         questionCard.answerList[questionCard.userAnswer].notCorrectAnswer()
+         questionCard.answerAnnotation = 'Неверно, правильный ответ "' + correctAnswerText + '"' + comment
       }
-
-   },
-   disableButton (buttonNode) {
-      buttonNode.className = buttonNode.className.replace(/btn__.*(?!\S)/, '')
-      buttonNode.classList.add('btn__disabled')
-      buttonNode.disabled = true
-   },
-   enableButton (buttonNode) {
-      buttonNode.className = buttonNode.className.replace(/btn__.*(?!\S)/, '')
-      buttonNode.classList.add('btn__default')
-      buttonNode.disabled = false
    },
 
    // выводит DOM вопроса
    renderNextQuestion() {
-      // Если список вопросов закончился - отобразить результаты
-      if (this.iterator >= this.questionsList.length) {
-         this.renderResult()
-      }
-
       // Если список не закончился, вывести следующий вопрос
-      if (this.iterator < this.questionsList.length) {
-         const currentQuestion = this.questionsList[this.iterator]
-         this.userAnswer = null // Обнулить ответ на предыдущий вопрос
-
-         // внести номер вопроса
-         this.questionElements.questionNumber.innerText = (this.iterator+1)+'/'+this.questionsList.length
-         // внести текст вопроса
-         this.questionElements.questionText.innerText = currentQuestion.wording
-
-         // очистка контейнера ответов и комментария к ответу
-         this.questionElements.questionAnswers.innerHTML = ''
-         this.questionElements.answerComment.innerHTML = ''
-
-         // Событие нажатия кнопки следующего ответа
-         if ( !this.nextQuestionEventRegistered ){
-            this.nextQuestionEventRegistered = true
-            this.nextButton.setAction('click', this.nextQuestionHandler.bind(this))
-            //this.questionElements.controlsNext.addEventListener ('click', this.nextQuestionHandler.bind(this))
-         }
+      console.log ( this.iterator, this.questionCardsList.length, this.iterator < this.questionCardsList.length )
+      if (this.iterator < this.questionCardsList.length) {
+         const questionCard = this.questionCardsList[this.iterator]
 
          // Если вопрос последний - вывести кнопку "Результаты"
-         if ( this.iterator+1 == this.questionsList.length )
-            this.questionElements.controlsNext.innerText = "Результат"
-
-         // Получить DOM списка ответов и вставить в контейнер ответов
-         this.questionElements.questionAnswers.appendChild(this.genAnswersList())
+         //if ( this.iterator+1 == this.questionCardsList.length )
+         //   this.questionElements.controlsNext.innerText = "Результат"
 
          // вывести полностью сформированную карточку с вопросом
-         document.querySelector('.question-app').replaceWith ( 
-            this.questionElements.topWrapper 
-         )
+         document.querySelector('.question-app').replaceWith (questionCard.getDOM()) 
+         this.iterator++
+      } else {
+         console.log (this.score)
+         const resultCard = new QuestionCard ()
+         resultCard.score = Math.floor( ( this.score * 100 ) / this.questionCardsList.length )+'% правильных ответов'
+         document.querySelector('.question-app').replaceWith (resultCard.getResultsDOM()) 
       }
    },
+
    renderResult() {
       this.questionElements.questionNumber.replaceWith(this.questionElements.results)
       this.questionElements.resultsPersent.innerHTML = Math.floor( ( this.score * 100 ) / this.questionsList.length )+'% правильных ответов'
@@ -296,8 +167,8 @@ const questionsApp = {
    },
 }
 
-   const vh = window.innerHeight * 0.01;
-   document.documentElement.style.setProperty('--vh', `${vh}px`)
+const vh = window.innerHeight * 0.01;
+document.documentElement.style.setProperty('--vh', `${vh}px`)
 window.addEventListener('resize', () => {
 })
 
@@ -327,7 +198,6 @@ window.addEventListener('load', (evt) => {
          })
       break
       case 'questions': // страница вопросов
-
          const url = new URLSearchParams(window.location.search)
          const themeID = url.get('id')
          const currentThemeQuestions = JSON.parse(questionsList)
